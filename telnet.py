@@ -2,13 +2,14 @@ import socket, threading
 from sys import argv
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', int(argv[1])))
+port = int(argv[1])
+port = 11911
+s.bind(('', port))
 s.listen(1)
-s.settimeout(60)
+s.settimeout(600)
 
 lock = threading.Lock()
-
-welcome_message = 'Type something!'
+ends = [b'\x04', b'\xff\xec', b'\x1d\r\n']
 
 
 class Daemon(threading.Thread):
@@ -18,12 +19,27 @@ class Daemon(threading.Thread):
         (self.socket, self.address) = socket
 
     def run(self):
+        print('Connected: {}'.format(self.address))
+        self.socket.send("Welcome!\r\n".encode("utf-8"))
         while True:
-            # wait for keypress + enter
             data = self.socket.recv(1024)
-            if data == b'\x04':
+            if not data:
                 break
-            print(data.decode("utf-8"), end='')
+            if data in ends:
+                break
+            try:
+                utf_data = data.decode("utf-8")
+                if '\r\n' in utf_data:
+                    return_string = ''
+                else:
+                    return_string = '\r\n'
+
+                utf_data = utf_data.replace('\r\n','')
+                print(utf_data, end='')
+                return_string = return_string + f'Received: \'{utf_data}\'\r\n'
+                self.socket.send(f'Received: \'{utf_data}\'\r\n'.encode("utf-8"))
+            except UnicodeDecodeError:
+                pass
         # close connection
         self.socket.shutdown(0)
         self.socket.close()
