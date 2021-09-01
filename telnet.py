@@ -2,8 +2,11 @@ import socket, threading
 from sys import argv
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-port = int(argv[1])
-port = 11911
+if len(argv) > 1:
+    port = int(argv[1])
+else:
+    port = 11911
+print(f'Listening on port {port}')
 s.bind(('', port))
 s.listen(1)
 s.settimeout(600)
@@ -35,7 +38,7 @@ class Daemon(threading.Thread):
                     return_string = '\r\n'
 
                 utf_data = utf_data.replace('\r\n','')
-                print(utf_data, end='')
+                print(utf_data, end='', flush=True)
                 return_string = return_string + f'Received: \'{utf_data}\'\r\n'
                 self.socket.send(f'Received: \'{utf_data}\'\r\n'.encode("utf-8"))
             except UnicodeDecodeError:
